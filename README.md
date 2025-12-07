@@ -40,7 +40,7 @@ Tuy nhiên, Frontend đã được tùy biến (re-skin) hoàn toàn để phụ
 ### 2. Cài đặt
 ```bash
 # Clone dự án
-git clone https://github.com/Anh-iscrying/to-do-list.git
+git clone https://github.com/Anh-iscrying/Chain-of-Gratitude.git
 cd to-do-list
 
 # Cài đặt thư viện
