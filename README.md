@@ -1,10 +1,6 @@
 # 🌸 Chain of Gratitude (On-Chain Journal)
 
-<<<<<<< HEAD
-**Dự án Final Project**
-=======
 **Final Project Submission**
->>>>>>> a280906 (Update)
 
 This is a **Decentralized Gratitude Journal** application running on the IOTA Testnet. The application allows users to preserve positive moments and expressions of gratitude immutably on the Blockchain.
 
