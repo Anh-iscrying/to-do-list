@@ -45,6 +45,7 @@ cd to-do-list
 
 # Cài đặt thư viện
 pnpm install
+```
 
 ### 3. Chạy Front-end
 ```bash
