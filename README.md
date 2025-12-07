@@ -18,7 +18,7 @@ Instead of a standard, dry To-Do List, **Chain of Gratitude** transforms basic C
 
 ## 💡 Technical Note on Structure
 The project is built upon the technical core of a **To-Do List (CRUD Application)**:
-- Repo Name: `to-do-list`
+- Repo Name: `Chain-of-Gratitude`
 - Smart Contract Module: `todo_list::todo_list`
 - Struct: `Task`
 
