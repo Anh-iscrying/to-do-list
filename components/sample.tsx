@@ -1,416 +1,194 @@
 "use client";
 
-/**
- * ============================================================================
- * PIZZA BOX DAPP INTEGRATION COMPONENT
- * ============================================================================
- *
- * This component allows users to cook pizzas and get flags when they cook
- * the perfect pizza with the right ingredients.
- *
- * All the contract logic is in hooks/useContract.ts
- *
- * ============================================================================
- */
-
-import { useCurrentAccount } from "@iota/dapp-kit";
-import { useContract } from "@/hooks/useContract";
-import { Button, Container, Heading, Text, TextField } from "@radix-ui/themes";
-import ClipLoader from "react-spinners/ClipLoader";
+import { useCurrentAccount, useSignAndExecuteTransaction, useIotaClientQuery } from "@iota/dapp-kit";
+import { Button, Container, Heading, Text, TextField, Card, Badge, Flex } from "@radix-ui/themes";
 import { useState } from "react";
+import { Transaction } from "@iota/iota-sdk/transactions";
+import { PACKAGE_ID, MODULE_NAME } from "@/lib/config";
+import { TrashIcon, CheckIcon, PlusIcon } from "@radix-ui/react-icons";
 
 const SampleIntegration = () => {
   const currentAccount = useCurrentAccount();
-  const { data, actions, state, pizzaBoxId, flagId } = useContract();
+  const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+  const [taskContent, setTaskContent] = useState("");
 
-  const [ingredients, setIngredients] = useState({
-    oliveOils: "10",
-    yeast: "3",
-    flour: "98",
-    water: "114",
-    salt: "18",
-    tomatoSauce: "200",
-    cheese: "180",
-    pineapple: "0",
-  });
+  // 1. QUERY DATA
+  const { data: tasksData, refetch, isPending } = useIotaClientQuery(
+    "getOwnedObjects",
+    {
+      owner: currentAccount?.address as string,
+      filter: { StructType: `${PACKAGE_ID}::${MODULE_NAME}::Task` },
+      options: { showContent: true },
+    },
+    {
+      enabled: !!currentAccount,
+      refetchInterval: 3000, 
+    }
+  );
 
-  const isConnected = !!currentAccount;
+  // --- HÀM XỬ LÝ TRANSACTION RIÊNG BIỆT (Để tránh lỗi IndexOutOfBounds) ---
 
-  const handleIngredientChange = (field: string, value: string) => {
-    setIngredients((prev) => ({ ...prev, [field]: value }));
+  // 1. Tạo Task
+  const createNewTask = () => {
+    if (!taskContent) return;
+    const tx = new Transaction();
+    
+    tx.moveCall({
+      target: `${PACKAGE_ID}::${MODULE_NAME}::create_task`,
+      arguments: [tx.pure.string(taskContent)],
+    });
+
+    executeTx(tx, "Đã thêm công việc thành công!", () => setTaskContent(""));
   };
 
-  if (!isConnected) {
+  // 2. Hoàn thành Task
+  const completeTask = (objectId: string) => {
+    const tx = new Transaction();
+    
+    tx.moveCall({
+      target: `${PACKAGE_ID}::${MODULE_NAME}::complete_task`,
+      arguments: [tx.object(objectId)], // tx.object PHẢI nằm trong cùng 1 instance tx
+    });
+
+    executeTx(tx, "Đã hoàn thành công việc!");
+  };
+
+  // 3. Xóa Task
+  const deleteTask = (objectId: string) => {
+    const tx = new Transaction();
+    
+    tx.moveCall({
+      target: `${PACKAGE_ID}::${MODULE_NAME}::delete_task`,
+      arguments: [tx.object(objectId)],
+    });
+
+    executeTx(tx, "Đã xóa công việc!");
+  };
+
+  // Hàm helper để ký và gửi (chỉ dùng để rút gọn đoạn sign)
+  const executeTx = (tx: Transaction, successMsg: string, callback?: () => void) => {
+    signAndExecuteTransaction(
+      { transaction: tx },
+      {
+        onSuccess: () => {
+          alert(successMsg);
+          callback?.();
+          setTimeout(() => refetch(), 1000);
+        },
+        onError: (err) => {
+          console.error(err);
+          alert("Lỗi: " + err.message);
+        },
+      }
+    );
+  };
+
+  // --- GIAO DIỆN ---
+
+  if (!currentAccount) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "1rem",
-        }}
-      >
-        <div style={{ maxWidth: "500px", width: "100%" }}>
-          <Heading size="6" style={{ marginBottom: "1rem" }}>
-            🍕 Pizza Box dApp
-          </Heading>
-          <Text>Please connect your wallet to cook pizzas!</Text>
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 text-black">
+        <div className="text-center p-8 bg-white rounded-xl shadow-lg border border-gray-200">
+          <Heading size="8" className="mb-4 text-blue-600">📝 To-Do List</Heading>
+          <Text size="4" className="text-gray-600">Kết nối ví để quản lý công việc</Text>
         </div>
       </div>
     );
   }
 
+  const tasks = tasksData?.data?.map((item: any) => {
+    const fields = item.data?.content?.fields;
+    return {
+      id: item.data?.objectId,
+      content: fields?.content,
+      is_done: fields?.is_done,
+    };
+  }) || [];
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        padding: "1rem",
-        background: "var(--gray-a2)",
-      }}
-    >
-      <Container style={{ maxWidth: "800px", margin: "0 auto" }}>
-        <Heading size="6" style={{ marginBottom: "2rem" }}>
-          🍕 Pizza Box dApp
+    // FIX UI: Thêm text-gray-900 để ép chữ màu đen, bg-white để ép nền trắng
+    <div className="min-h-screen p-8 bg-gray-50 text-gray-900">
+      <Container size="3">
+        <Heading size="8" align="center" className="mb-8 text-blue-700 drop-shadow-sm">
+           Quản Lý Công Việc (On-Chain)
         </Heading>
 
-        {/* Flag Status */}
-        {flagId && (
-          <div
-            style={{
-              marginBottom: "1rem",
-              padding: "1.5rem",
-              background: "var(--green-a3)",
-              borderRadius: "8px",
-              border: "2px solid var(--green-7)",
-            }}
-          >
-            <Heading size="4" style={{ marginBottom: "0.5rem" }}>
-              🎉 Congratulations! Flag Captured!
-            </Heading>
-            <Text
-              style={{
-                color: "var(--green-11)",
-                display: "block",
-                marginBottom: "0.5rem",
-              }}
-            >
-              You&apos;ve cooked the perfect pizza and earned your flag!
-            </Text>
-            <Text
-              size="1"
-              style={{
-                color: "var(--gray-a11)",
-                display: "block",
-                fontFamily: "monospace",
-                wordBreak: "break-all",
-              }}
-            >
-              Flag ID: {flagId}
-            </Text>
-          </div>
-        )}
-
-        {/* Pizza Box Status */}
-        {pizzaBoxId && data && (
-          <div
-            style={{
-              marginBottom: "1rem",
-              padding: "1rem",
-              background: "var(--gray-a3)",
-              borderRadius: "8px",
-            }}
-          >
-            <Text
-              size="2"
-              style={{
-                display: "block",
-                marginBottom: "0.5rem",
-                fontWeight: "bold",
-              }}
-            >
-              Your Pizza Box 📦
-            </Text>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "0.5rem",
-                marginBottom: "1rem",
-              }}
-            >
-              <Text size="2">Olive Oils: {data.oliveOils}</Text>
-              <Text size="2">Yeast: {data.yeast}</Text>
-              <Text size="2">Flour: {data.flour}</Text>
-              <Text size="2">Water: {data.water}</Text>
-              <Text size="2">Salt: {data.salt}</Text>
-              <Text size="2">Tomato Sauce: {data.tomatoSauce}</Text>
-              <Text size="2">Cheese: {data.cheese}</Text>
-              <Text size="2">Pineapple: {data.pineapple}</Text>
-            </div>
-            <Text
-              size="1"
-              style={{
-                color: "var(--gray-a11)",
-                display: "block",
-                fontFamily: "monospace",
-                wordBreak: "break-all",
-              }}
-            >
-              PizzaBox ID: {pizzaBoxId}
-            </Text>
-
-            {!flagId && (
-              <Button
-                size="2"
-                style={{ marginTop: "1rem" }}
-                onClick={actions.getFlag}
-                disabled={state.isLoading || state.isPending}
-              >
-                {state.isLoading || state.isPending ? (
-                  <>
-                    <ClipLoader size={14} style={{ marginRight: "8px" }} />
-                    Checking...
-                  </>
-                ) : (
-                  "🚩 Get Flag"
-                )}
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Cook Pizza Form */}
-        <div
-          style={{
-            padding: "1.5rem",
-            background: "var(--gray-a3)",
-            borderRadius: "8px",
-            marginBottom: "1rem",
-          }}
-        >
-          <Heading size="4" style={{ marginBottom: "1rem" }}>
-            Cook a Pizza 👨‍🍳
+        {/* INPUT FORM - Đã sửa lại màu sắc độ tương phản cao */}
+        <div className="mb-8 p-6 bg-white rounded-xl shadow-lg border border-gray-200">
+          <Heading size="4" className="mb-4 text-gray-800 font-bold">
+            Thêm công việc mới
           </Heading>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "1rem",
-              marginBottom: "1rem",
-            }}
-          >
-            <div>
-              <Text
-                size="2"
-                style={{ display: "block", marginBottom: "0.3rem" }}
-              >
-                Olive Oils
-              </Text>
-              <TextField.Root
-                value={ingredients.oliveOils}
-                onChange={(e) =>
-                  handleIngredientChange("oliveOils", e.target.value)
-                }
-                type="number"
-                min="0"
-                max="65535"
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-grow">
+              {/* Dùng thẻ input thường thay vì TextField của Radix để dễ chỉnh màu */}
+              <input 
+                type="text"
+                placeholder="Ví dụ: Đi chợ, Học Move..." 
+                value={taskContent}
+                onChange={(e) => setTaskContent(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg text-black bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               />
             </div>
-            <div>
-              <Text
-                size="2"
-                style={{ display: "block", marginBottom: "0.3rem" }}
-              >
-                Yeast
-              </Text>
-              <TextField.Root
-                value={ingredients.yeast}
-                onChange={(e) =>
-                  handleIngredientChange("yeast", e.target.value)
-                }
-                type="number"
-                min="0"
-                max="65535"
-              />
-            </div>
-            <div>
-              <Text
-                size="2"
-                style={{ display: "block", marginBottom: "0.3rem" }}
-              >
-                Flour
-              </Text>
-              <TextField.Root
-                value={ingredients.flour}
-                onChange={(e) =>
-                  handleIngredientChange("flour", e.target.value)
-                }
-                type="number"
-                min="0"
-                max="65535"
-              />
-            </div>
-            <div>
-              <Text
-                size="2"
-                style={{ display: "block", marginBottom: "0.3rem" }}
-              >
-                Water
-              </Text>
-              <TextField.Root
-                value={ingredients.water}
-                onChange={(e) =>
-                  handleIngredientChange("water", e.target.value)
-                }
-                type="number"
-                min="0"
-                max="65535"
-              />
-            </div>
-            <div>
-              <Text
-                size="2"
-                style={{ display: "block", marginBottom: "0.3rem" }}
-              >
-                Salt
-              </Text>
-              <TextField.Root
-                value={ingredients.salt}
-                onChange={(e) => handleIngredientChange("salt", e.target.value)}
-                type="number"
-                min="0"
-                max="65535"
-              />
-            </div>
-            <div>
-              <Text
-                size="2"
-                style={{ display: "block", marginBottom: "0.3rem" }}
-              >
-                Tomato Sauce
-              </Text>
-              <TextField.Root
-                value={ingredients.tomatoSauce}
-                onChange={(e) =>
-                  handleIngredientChange("tomatoSauce", e.target.value)
-                }
-                type="number"
-                min="0"
-                max="65535"
-              />
-            </div>
-            <div>
-              <Text
-                size="2"
-                style={{ display: "block", marginBottom: "0.3rem" }}
-              >
-                Cheese
-              </Text>
-              <TextField.Root
-                value={ingredients.cheese}
-                onChange={(e) =>
-                  handleIngredientChange("cheese", e.target.value)
-                }
-                type="number"
-                min="0"
-                max="65535"
-              />
-            </div>
-            <div>
-              <Text
-                size="2"
-                style={{ display: "block", marginBottom: "0.3rem" }}
-              >
-                Pineapple 🍍
-              </Text>
-              <TextField.Root
-                value={ingredients.pineapple}
-                onChange={(e) =>
-                  handleIngredientChange("pineapple", e.target.value)
-                }
-                type="number"
-                min="0"
-                max="65535"
-              />
-            </div>
+            
+            {/* Nút bấm chỉnh màu cứng: Nền xanh đậm, chữ trắng */}
+            <button 
+              onClick={createNewTask} 
+              disabled={!taskContent} 
+              className={`
+                px-6 py-3 rounded-lg font-bold text-white shadow-md transition-all flex items-center justify-center
+                ${!taskContent ? 'bg-red-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:scale-95 cursor-pointer'}
+              `}
+            >
+              <PlusIcon className="w-5 h-5 mr-2" /> 
+              THÊM NGAY
+            </button>
           </div>
-
-          <Button
-            size="3"
-            onClick={() =>
-              actions.cookPizza(
-                parseInt(ingredients.oliveOils),
-                parseInt(ingredients.yeast),
-                parseInt(ingredients.flour),
-                parseInt(ingredients.water),
-                parseInt(ingredients.salt),
-                parseInt(ingredients.tomatoSauce),
-                parseInt(ingredients.cheese),
-                parseInt(ingredients.pineapple)
-              )
-            }
-            disabled={state.isPending || state.isLoading}
-          >
-            {state.isLoading ? (
-              <>
-                <ClipLoader size={16} style={{ marginRight: "8px" }} />
-                Cooking...
-              </>
-            ) : (
-              "🍕 Cook Pizza"
-            )}
-          </Button>
         </div>
 
-        {/* Transaction Status */}
-        {state.hash && (
-          <div
-            style={{
-              marginTop: "1rem",
-              padding: "1rem",
-              background: "var(--gray-a3)",
-              borderRadius: "8px",
-            }}
-          >
-            <Text size="1" style={{ display: "block", marginBottom: "0.5rem" }}>
-              Transaction Hash
-            </Text>
-            <Text
-              size="2"
-              style={{ fontFamily: "monospace", wordBreak: "break-all" }}
-            >
-              {state.hash}
-            </Text>
-            {state.isConfirmed && (
-              <Text
-                size="2"
-                style={{
-                  color: "green",
-                  marginTop: "0.5rem",
-                  display: "block",
-                }}
-              >
-                ✅ Transaction confirmed!
-              </Text>
-            )}
+        {/* TASK LIST - FIX UI: Card nền trắng, chữ đen */}
+        <Heading size="4" mb="4" className="text-gray-800 border-b pb-2">
+          Danh sách công việc ({tasks.length})
+        </Heading>
+        
+        {isPending ? (
+          <Text className="text-gray-500 italic">Đang tải dữ liệu...</Text>
+        ) : tasks.length === 0 ? (
+          <div className="text-center p-8 bg-white rounded border border-dashed border-gray-300">
+             <Text className="text-gray-500">Chưa có công việc nào. Hãy tạo cái đầu tiên!</Text>
           </div>
-        )}
+        ) : (
+          <div className="flex flex-col gap-3">
+            {tasks.map((task) => (
+              <Card key={task.id} className="hover:shadow-md transition-all bg-white border border-gray-200">
+                <Flex justify="between" align="center" gap="3">
+                  <Flex gap="3" align="center" className="overflow-hidden">
+                    <Badge color={task.is_done ? "green" : "orange"} size="2" variant="solid">
+                      {task.is_done ? "Hoàn thành" : "Đang làm"}
+                    </Badge>
+                    
+                    <Text 
+                      size="3" 
+                      weight="medium"
+                      className={`truncate ${task.is_done ? "line-through text-gray-400" : "text-gray-800"}`}
+                    >
+                      {task.content}
+                    </Text>
+                  </Flex>
 
-        {/* Error Display */}
-        {state.error && (
-          <div
-            style={{
-              marginTop: "1rem",
-              padding: "1rem",
-              background: "var(--red-a3)",
-              borderRadius: "8px",
-            }}
-          >
-            <Text style={{ color: "var(--red-11)" }}>
-              Error: {(state.error as Error)?.message || String(state.error)}
-            </Text>
+                  <Flex gap="2" shrink="0">
+                    {!task.is_done && (
+                      <Button color="green" variant="soft" onClick={() => completeTask(task.id)} className="cursor-pointer">
+                        <CheckIcon /> <span className="hidden sm:inline">Xong</span>
+                      </Button>
+                    )}
+                    <Button color="red" variant="soft" onClick={() => deleteTask(task.id)} className="cursor-pointer">
+                      <TrashIcon /> <span className="hidden sm:inline">Xóa</span>
+                    </Button>
+                  </Flex>
+                </Flex>
+              </Card>
+            ))}
           </div>
         )}
       </Container>

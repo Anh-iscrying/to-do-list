@@ -8,16 +8,17 @@ import { getFullnodeUrl } from "@iota/iota-sdk/client"
 import { createNetworkConfig } from "@iota/dapp-kit"
 
 // Package IDs - These will be automatically filled when you run `npm run iota-deploy`
-export const DEVNET_PACKAGE_ID = "0x07f7d000c0edd43232395a19b38425d7ec1bcc9b929b3b7ad6ad0d694b441116"
+export const PACKAGE_ID = "0x572fe621c85d764c1564837f5deb8273dfe5631e8184ef4a08f49e83cecc67d5"
 export const TESTNET_PACKAGE_ID = ""
 export const MAINNET_PACKAGE_ID = ""
+export const MODULE_NAME = "todo_list"; 
 
 // Network configuration
 const { networkConfig, useNetworkVariable, useNetworkVariables } = createNetworkConfig({
   devnet: {
     url: getFullnodeUrl("devnet"),
     variables: {
-      packageId: DEVNET_PACKAGE_ID,
+      packageId: PACKAGE_ID,
     },
   },
   testnet: {
