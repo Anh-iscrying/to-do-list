@@ -49,8 +49,6 @@ pnpm install
 
 ### 3. Chạy Front-end
 ```bash
-code
-Bash
 pnpm dev
 ```
 Mở trình duyệt tại: http://localhost:3000
