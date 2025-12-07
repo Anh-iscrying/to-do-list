@@ -8,6 +8,7 @@ This is a **Decentralized Gratitude Journal** application running on the IOTA Te
 Instead of a standard, dry To-Do List, **Chain of Gratitude** transforms basic CRUD operations (Create, Read, Update, Delete) on the Blockchain into an emotional experience:
 - Sending out positive energy.
 - "Cherishing" beautiful moments in the heart (and on the chain).
+<img width="1898" height="907" alt="Screenshot 2025-12-07 114954" src="https://github.com/user-attachments/assets/a0eb2e77-e3e6-4d42-8cfc-340b7368ddcc" />
 
 ## 🌟 Features
 - **Sending Gratitude (Create):** Create an Object containing the gratitude message and store it directly on-chain.
