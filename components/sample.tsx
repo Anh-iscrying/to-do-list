@@ -186,7 +186,7 @@ const SampleIntegration = () => {
                         <HeartFilledIcon /> <span className="hidden sm:inline">Khắc ghi</span>
                       </Button>
                     )}
-                    <Button color="gray" variant="ghost" onClick={() => forgetGratitude(task.id)} className="cursor-pointer hover:bg-gray-200">
+                    <Button color="red" variant="ghost" onClick={() => forgetGratitude(task.id)} className="cursor-pointer hover:bg-gray-200">
                       <TrashIcon /> <span className="hidden sm:inline">Xóa</span>
                     </Button>
                   </Flex>
