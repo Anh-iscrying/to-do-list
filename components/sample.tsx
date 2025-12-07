@@ -106,7 +106,6 @@ const SampleIntegration = () => {
   }) || [];
 
   return (
-    // Đổi nền sang màu hồng nhạt (rose-50) cho ấm áp
     <div className="min-h-screen p-8 bg-rose-50 text-gray-900">
       <Container size="3">
         <Heading size="8" align="center" className="mb-2 text-rose-600 drop-shadow-sm font-serif">
